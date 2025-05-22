@@ -1,1 +1,144 @@
 
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>你幾點有空？AR 遊戲</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-three.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #FFF9F0; overflow: hidden; }
+    #overlay {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(255,255,255,0.95); padding: 1em; border-radius: 8px;
+      z-index: 100; display: none;
+    }
+    #control-panel {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.95); padding: 1em;
+      border-radius: 12px; z-index: 100; display: none;
+    }
+    select, button {
+      margin: 5px; padding: 8px; font-size: 16px;
+      border-radius: 6px; border: 1px solid #ccc;
+    }
+    button { background: #4CAF50; color: white; cursor: pointer; }
+    button:hover { background: #45a049; }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <h3 id="player-role">識別中...</h3>
+    <p id="player-status"></p>
+  </div>
+
+  <div id="control-panel">
+    <select id="time-slot">
+      <option value="8-10">8:00-10:00</option>
+      <option value="10-12">10:00-12:00</option>
+      <option value="12-14">12:00-14:00</option>
+      <option value="14-16">14:00-16:00</option>
+      <option value="16-18">16:00-18:00</option>
+      <option value="18-20">18:00-20:00</option>
+    </select>
+    <select id="weekday">
+      <option value="Monday">週一</option>
+      <option value="Tuesday">週二</option>
+      <option value="Wednesday">週三</option>
+      <option value="Thursday">週四</option>
+      <option value="Friday">週五</option>
+    </select>
+    <button onclick="saveSchedule()">儲存時間</button>
+  </div>
+
+  <script type="module">
+    import { MindARThree } from "https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-three.prod.js";
+
+    const supabase = supabase.createClient(
+      "https://zjbhnljmhaqkytobiogm.supabase.co",
+      "your-anon-key-here"
+    );
+
+    const roleMap = ["robot_01", "robot_02", "robot_03", "robot_04", "robot_05"];
+    const roleNameMap = {
+      "robot_01": "重型作業機",
+      "robot_02": "社交模擬機",
+      "robot_03": "秘密偵導機",
+      "robot_04": "數據分析機",
+      "robot_05": "簡訊回覆機"
+    };
+
+    let currentUserId = null;
+    let currentGameId = null;
+
+    const mindarThree = new MindARThree({
+      container: document.body,
+      imageTargetSrc: "./targets.mind"
+    });
+
+    const { renderer, scene, camera } = mindarThree;
+    const anchors = [];
+
+    for (let i = 0; i < 5; i++) {
+      anchors[i] = mindarThree.addAnchor(i);
+      anchors[i].onTargetFound = async () => {
+        const playerId = roleMap[i];
+        document.getElementById("overlay").style.display = "block";
+        document.getElementById("player-role").textContent = `你是：${roleNameMap[playerId]}`;
+        await startGame(playerId);
+      };
+    }
+
+    await mindarThree.start();
+    renderer.setAnimationLoop(() => {
+      renderer.render(scene, camera);
+    });
+
+    async function startGame(playerId) {
+      currentUserId = playerId;
+      const { data: existingGame } = await supabase
+        .from('roles').select('game_id').limit(1);
+
+      if (!existingGame || existingGame.length === 0) {
+        currentGameId = crypto.randomUUID();
+        await supabase.from('roles').insert({
+          game_id: currentGameId,
+          user_id: currentUserId,
+          is_spy: true
+        });
+        document.getElementById("player-status").textContent = "你是反法（第一位加入）";
+      } else {
+        currentGameId = existingGame[0].game_id;
+        await supabase.from('roles').insert({
+          game_id: currentGameId,
+          user_id: currentUserId,
+          is_spy: false
+        });
+        document.getElementById("player-status").textContent = "你是正法成員";
+      }
+
+      document.getElementById("control-panel").style.display = "block";
+    }
+
+    async function saveSchedule() {
+      const timeSlot = document.getElementById('time-slot').value;
+      const weekday = document.getElementById('weekday').value;
+
+      try {
+        await supabase.from('schedules').insert({
+          game_id: currentGameId,
+          user_id: currentUserId,
+          weekday: weekday,
+          time_slot: timeSlot
+        });
+        alert("\u884c\u7a0b\u5df2\u5132\u5b58！");
+      } catch (error) {
+        alert("\u5132\u5b58\u5931\u6557\uff0c\u8acb\u91cd\u8a66");
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>
