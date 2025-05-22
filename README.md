@@ -1,122 +1,133 @@
+
 # 你幾點有空？開會時間安排大作戰
 
-這是一款結合 AR 掃描、行程推理與角色扮演的桌遊網頁前端。  
-使用者會透過掃描角色卡，進行身分分派並進入互動排程流程。
+這是一款結合 AR 掃描、角色扮演與時間協調推理的互動遊戲。  
+使用者會透過掃描角色卡進入遊戲，系統分派角色與身分，接著進行時間表填寫並儲存至雲端。
 
 ---
 
-## 專案簡介
+## 遊戲流程
 
-- 使用 MindAR.js 掃描實體角色卡（5 張角色）
-- 掃描後傳送 playerId + gameId 到後端
-- 後端分派玩家身份（正派/反派）並回傳
-- 每場遊戲以 gameId 隔離資料，支援多房同時進行
+1. 玩家進入 `join.html`，輸入房號（gameId）
+2. 掃描角色卡（透過 MindAR.js）
+3. 系統依據掃描圖片對應的角色 ID（如 robot_02），建立或加入該場遊戲
+   - 隨機分派正方或反方（每場遊戲只有一位反方）
+4. 顯示角色名稱與身分（透過 AR 畫面）
+5. 玩家選擇可參加會議的時間區段（時間表）
+6. 時間表儲存至 Supabase
+7. 玩家最終將投票選出會議時間與可能的反派
+
+---
+
+## 角色卡對應（targetIndex）
+
+| Index | 圖片檔名         | 角色 ID    | 中文角色名稱 |
+|-------|------------------|------------|----------------|
+| 0     | 重型作業機2.png  | robot_01   | 重型作業機     |
+| 1     | 社交模擬機2.png  | robot_02   | 社交模擬機     |
+| 2     | 秘密偵察機2.png  | robot_03   | 秘密偵察機     |
+| 3     | 數據分析機2.png  | robot_04   | 數據分析機     |
+| 4     | 簡訊回覆機2.png  | robot_05   | 簡訊回覆機     |
+
+這些圖片已編譯為 `targets.mind` 供 AR 辨識使用。
 
 ---
 
 ## 專案結構
 
 ```
-robot-meeting-game/
-├── index.html             # 掃描角色卡頁面
-├── join.html              # 輸入房號頁面（可選）
-├── targets.mind           # MindAR 掃描模型檔案
-├── targets.json           # MindAR 模型 metadata
-├── assets/                # 角色圖片資源
-│   ├── robot_01.png
-│   ├── robot_02.png
+/project-root
+├── index.html             # AR 掃描與時間表頁面
+├── join.html              # 輸入房號頁面
+├── targets.mind           # MindAR 掃描模型
+├── targets.json           # 圖像 index 與角色對照（可選）
+├── assets/                # 圖像資源
+│   ├── 01_robot_01.jpg
 │   └── ...
-└── README.md              # 工程師協作說明文件
+└── README.md              # 專案說明
 ```
+
+---
 
 ## API 串接需求
 
 ### `POST /api/join_game`
 
-前端傳送：
-
 ```json
 {
   "gameId": "GAME123",
-  "playerId": "robot_03"
+  "playerId": "robot_02"
 }
 ```
-
-後端回傳：
-
-```json
-{
-  "status": "ok",
-  "faction": "good","evil"
-  "playerId": "robot_03"
-}
-```
-
-規則：
-- 若該玩家已存在於此場遊戲，回傳已分派身分
-- 若首次加入，隨機分派（預設每場一位反派）
-
----
-
-## Supabase 資料表設計建議
-
-資料表名稱：`players`
-
-| 欄位名稱     | 型別      | 說明                      |
-|--------------|-----------|---------------------------|
-| id           | UUID      | 主鍵，自動產生            |
-| game_id      | TEXT      | 遊戲房號                  |
-| player_id    | TEXT      | 機器人角色 ID             |
-| faction      | TEXT      | "good" / "evil"           |
-| has_scanned  | BOOLEAN   | 是否已掃描（預設 true）   |
-| schedule     | JSONB     | 行程資料（可選填）        |
-| created_at   | TIMESTAMP | 自動產生時間戳記          |
-
-可加上以下索引：
-
-```sql
-CREATE INDEX idx_game_id ON public.players (game_id);
-CREATE INDEX idx_player_id ON public.players (player_id);
-```
-
----
-
-## API 延伸建議
-
-### `GET /api/get_players?gameId=GAME123`
-
-用於查詢某場遊戲的玩家與身分（如 DEBUG 回合）。
 
 回傳：
 
 ```json
-[
-  { "playerId": "robot_01", "faction": "good" },
-  { "playerId": "robot_02", "faction": "evil" }
-]
+{
+  "status": "ok",
+  "faction": "good",
+  "playerId": "robot_02"
+}
 ```
 
 ---
 
-## 前端操作流程
+## Supabase 資料表設計
 
-1. 玩家輸入房號（gameId）
-2. 掃描角色卡（取得 playerId）
-3. 呼叫 `/api/join_game` 拿到身分
-4. 顯示身分動畫／文字提示
-5. 進入行程排程階段（未來擴充）
+### `roles`（玩家身份）
+
+| 欄位名稱   | 型別    | 說明           |
+|------------|---------|----------------|
+| game_id    | TEXT    | 房號           |
+| user_id    | TEXT    | 玩家角色 ID    |
+| is_spy     | BOOLEAN | 是否為反派     |
+| created_at | TIMESTAMP | 建立時間     |
+
+### `schedules`（時間表）
+
+| 欄位名稱   | 型別    | 說明               |
+|------------|---------|--------------------|
+| game_id    | TEXT    | 房號               |
+| user_id    | TEXT    | 玩家角色 ID        |
+| weekday    | TEXT    | 星期幾（如 Monday）|
+| time_slot  | TEXT    | 時段（如 10-12）   |
+| created_at | TIMESTAMP | 建立時間         |
+
+---
+
+## 資料顯示限制（重要）
+
+- 玩家只能看到**自己**的身份與時間表（掃描角色卡後進入個人畫面）
+- 所有時間表資料儲存在 `schedules` 資料表，但不可向其他玩家公開
+- 這是一款「推理型遊戲」，禁止前端顯示或 broadcast 所有玩家行程
+- 請勿設計類似 `/api/get_schedules` 的開放查詢 API
+- 若將來需計算交集時間，請由後端統計後只傳回結果摘要
+
+###  安全設計建議
+
+- 每位玩家只能呼叫 `/api/get_my_schedule` 或查詢 `WHERE user_id = ?`
+- 若使用 Supabase 建議加上 RLS（Row Level Security）
+
+```sql
+-- 限制 schedule 查詢僅能看到自己的資料
+CREATE POLICY "Users can only read their own schedule"
+ON schedules FOR SELECT
+USING (auth.uid() = user_id);
+```
+
+---
+
+##  注意事項
+
+- 使用者須授權開啟相機權限才能啟動 AR 模式
+- 建議於 HTTPS 環境（如 GitHub Pages、Netlify、Vercel）部署
 
 ---
 
 ## 協作說明
 
-請後端協助：
+請後端工程師協助：
 
-- 以建立上述 Supabase 資料表，要麻煩協助索引
-- 撰寫 `/api/join_game` 和 `/api/get_players` 的處理邏輯
-- 確保每場 gameId 的資料獨立、互不干擾
-
----
-
-任何問題可由前端使用者提出具體參數、畫面流程圖協助協調。  
-預期支援單場 4~5 人遊戲，每人使用各自裝置。
+- 建立 Supabase 的 `roles` 與 `schedules` 表
+- 撰寫 `/api/join_game` 接口以分派身份（選擇性）
+- 確保資料查詢皆有身份驗證與限制（不可洩漏其他玩家行程）
