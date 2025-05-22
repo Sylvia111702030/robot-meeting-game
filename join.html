@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>加入遊戲房間｜你幾點有空？</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #FFF9F0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    h1 {
+      color: #4C4C4C;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 200px;
+      text-align: center;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #C7FFD8;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #B5EAD7;
+    }
+  </style>
+</head>
+<body>
+  <h1>輸入你的遊戲房號</h1>
+  <input type="text" id="gameIdInput" placeholder="例如：GAME123" />
+  <button onclick="startGame()">開始遊戲</button>
+
+  <script>
+    function startGame() {
+      const gameId = document.getElementById('gameIdInput').value.trim();
+      if (!gameId) {
+        alert("請輸入房號");
+        return;
+      }
+
+      // 方法 1：存到 localStorage
+      localStorage.setItem("gameId", gameId);
+
+      // 方法 2（也可選擇）：加到網址參數
+      // location.href = "index.html?gameId=" + encodeURIComponent(gameId);
+
+      // 跳轉到掃描頁面
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
