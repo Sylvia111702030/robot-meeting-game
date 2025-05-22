@@ -1,0 +1,17 @@
+[
+  {
+    "name": "robot_01", "role": "重型作業機" 
+  },
+  {
+    "name": "robot_02", "role": "社交模擬機" 
+  },
+  {
+    "name": "robot_03", "role": "秘密偵察機" 
+  },
+  {
+    "name": "robot_04", "role": "數據分析機"
+  },
+  {
+    "name": "robot_05" , "role": "簡訊回覆機"
+  }
+]
