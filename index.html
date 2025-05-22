@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -57,8 +56,8 @@
     import { MindARThree } from "https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-three.prod.js";
 
     const supabase = supabase.createClient(
-      "https://zjbhnljmhaqkytobiogm.supabase.co",
-      "your-anon-key-here"
+      "https://ar-backend.zeabur.app",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE"
     );
 
     const roleMap = ["robot_01", "robot_02", "robot_03", "robot_04", "robot_05"];
@@ -91,10 +90,14 @@
       };
     }
 
-    await mindarThree.start();
-    renderer.setAnimationLoop(() => {
-      renderer.render(scene, camera);
-    });
+    try {
+      await mindarThree.start();
+      renderer.setAnimationLoop(() => {
+        renderer.render(scene, camera);
+      });
+    } catch (e) {
+      console.error("MindAR 啟動失敗：", e);
+    }
 
     async function startGame(playerId) {
       currentUserId = playerId;
@@ -108,7 +111,7 @@
           user_id: currentUserId,
           is_spy: true
         });
-        document.getElementById("player-status").textContent = "你是反法（第一位加入）";
+        document.getElementById("player-status").textContent = "你是反派";
       } else {
         currentGameId = existingGame[0].game_id;
         await supabase.from('roles').insert({
@@ -116,7 +119,7 @@
           user_id: currentUserId,
           is_spy: false
         });
-        document.getElementById("player-status").textContent = "你是正法成員";
+        document.getElementById("player-status").textContent = "你是正方";
       }
 
       document.getElementById("control-panel").style.display = "block";
@@ -133,9 +136,9 @@
           weekday: weekday,
           time_slot: timeSlot
         });
-        alert("\u884c\u7a0b\u5df2\u5132\u5b58！");
+        alert("行程已儲存！");
       } catch (error) {
-        alert("\u5132\u5b58\u5931\u6557\uff0c\u8acb\u91cd\u8a66");
+        alert("儲存失敗，請重試");
         console.error(error);
       }
     }
