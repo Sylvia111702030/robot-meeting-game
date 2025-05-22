@@ -47,7 +47,7 @@ robot-meeting-game/
 ```json
 {
   "status": "ok",
-  "faction": "good",// 或 "evil"
+  "faction": "good","evil"
   "playerId": "robot_03"
 }
 ```
